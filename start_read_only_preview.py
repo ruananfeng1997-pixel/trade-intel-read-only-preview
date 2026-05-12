@@ -43,15 +43,7 @@ except ImportError as e:
     print(f"ERROR: Could not import read_only_http_api_server: {e}")
     sys.exit(1)
 
-if hasattr(read_only_http_api_server, "run"):
-    read_only_http_api_server.run(host=HOST, port=PORT)
-elif hasattr(read_only_http_api_server, "app"):
-    app = read_only_http_api_server.app
-    if hasattr(app, "run"):
-        app.run(host=HOST, port=PORT)
-    else:
-        print("ERROR: No run method found on app.")
-        sys.exit(1)
-else:
-    print("ERROR: read_only_http_api_server has no run() or app.")
-    sys.exit(1)
+# Set module-level config before calling start_server()
+read_only_http_api_server.HOST = HOST
+read_only_http_api_server.PORT = PORT
+read_only_http_api_server.start_server()
