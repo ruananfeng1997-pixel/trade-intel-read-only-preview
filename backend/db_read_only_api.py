@@ -9,7 +9,7 @@ import sqlite3
 import sys
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-DB_PATH = os.path.join(PROJECT_ROOT, "backend", "state", "trade_intel.local.sqlite3")
+DB_PATH = os.environ.get("TRADE_INTEL_DB_PATH") or os.path.join(PROJECT_ROOT, "backend", "state", "trade_intel.local.sqlite3")
 
 SAFETY_FIELDS = {
     "real_send": "NOT_RUN",
