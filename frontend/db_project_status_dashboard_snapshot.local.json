@@ -1,0 +1,55 @@
+{
+  "step": "392Y",
+  "status": "DB_PROJECT_STATUS_DASHBOARD_SNAPSHOT_CREATED",
+  "project_state": "RUNTIME_HOLD",
+  "snapshot_mode": "DATABASE_BACKED_READ_ONLY_SNAPSHOT",
+  "api_mode": "READ_ONLY_DB_FUNCTIONS",
+  "http_server_started": false,
+  "post_endpoints_created": false,
+  "database": {
+    "db_path": "backend/state/trade_intel.local.sqlite3",
+    "table_count": 10,
+    "index_count": 5,
+    "total_rows": 18
+  },
+  "watchlists": {
+    "watchlists_count": 4,
+    "enabled_watchlists": [
+      "tsla"
+    ],
+    "disabled_watchlists": [
+      "nvda",
+      "aapl",
+      "spy_macro"
+    ]
+  },
+  "review_queue": {
+    "candidate_count": 4,
+    "send_authorized_count": 0
+  },
+  "delivered_events": {
+    "delivered_events_count": 3
+  },
+  "scheduler": {
+    "health_status": "HEALTHY",
+    "task_name": "TradeIntelManualDryRun"
+  },
+  "local_alert": {
+    "alert_required": false,
+    "alert_level": "NONE"
+  },
+  "safety": {
+    "real_send": "NOT_RUN",
+    "webhook_call": "NOT_RUN",
+    "delivered_history_modified": false,
+    "scheduler_modified": false,
+    "scheduler_triggered": false,
+    "enterprise_wechat_sent": false,
+    "webhook_called": false,
+    "auto_send_enabled": false,
+    "production": "DISABLED",
+    "retry": "DISABLED",
+    "db_write_executed": false
+  },
+  "failures": []
+}

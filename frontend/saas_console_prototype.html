@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SaaS Console Prototype</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #1a1a2e; }
+  .app-layout { display: flex; min-height: 100vh; }
+  .sidebar { width: 200px; background: #1a1a2e; color: #fff; padding: 20px 0; flex-shrink: 0; }
+  .sidebar .app-title { padding: 0 20px 20px; font-size: 16px; font-weight: 700; border-bottom: 1px solid #333; }
+  .sidebar .app-title small { display: block; font-size: 10px; font-weight: 400; color: #888; margin-top: 4px; }
+  .sidebar nav { padding: 12px 0; }
+  .sidebar nav a { display: block; padding: 10px 20px; color: #bbb; text-decoration: none; font-size: 13px; transition: .2s; cursor: pointer; }
+  .sidebar nav a:hover { background: #2a2a4e; color: #fff; }
+  .sidebar nav a.active { background: #2a2a4e; color: #fff; border-left: 3px solid #3498db; }
+  .sidebar .env-label { padding: 20px 20px 0; font-size: 10px; color: #555; }
+  .main { flex: 1; display: flex; flex-direction: column; }
+  .safety-bar { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 20px; background: #fff; border-bottom: 1px solid #e0e0e0; font-size: 11px; }
+  .safety-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 4px; font-weight: 600; }
+  .safety-tag.ok { background: #e8f5e9; color: #2e7d32; }
+  .safety-tag.info { background: #e3f2fd; color: #1565c0; }
+  .content-area { padding: 20px; flex: 1; overflow-y: auto; }
+  .page-header { margin-bottom: 20px; }
+  .page-header h2 { font-size: 20px; font-weight: 700; }
+  .page-header p { font-size: 13px; color: #888; margin-top: 4px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .kpi-card { background: #fff; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .kpi-card .kpi-num { font-size: 24px; font-weight: 700; color: #1a1a2e; }
+  .kpi-card .kpi-label { font-size: 11px; color: #888; margin-top: 2px; }
+  .kpi-card .kpi-status { font-size: 12px; font-weight: 600; margin-top: 4px; }
+  .kpi-card .kpi-status.pass { color: #2e7d32; }
+  .kpi-card .kpi-status.fail { color: #c62828; }
+  .kpi-card .kpi-status.warn { color: #e65100; }
+  .kpi-card .kpi-status.disabled { color: #bbb; }
+  .section-title { font-size: 16px; font-weight: 700; margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 2px solid #ddd; }
+  .section-title:first-of-type { margin-top: 0; }
+  .card { background: #fff; border-radius: 8px; padding: 16px 20px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); font-size: 13px; }
+  .card .card-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #1a1a2e; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  .info-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f5f5f5; }
+  .info-item:last-child { border-bottom: none; }
+  .info-label { color: #999; font-size: 12px; }
+  .info-value { font-weight: 600; font-size: 12px; color: #1a1a2e; }
+  .info-value.pass { color: #2e7d32; }
+  .info-value.fail { color: #c62828; }
+  .info-value.warn { color: #e65100; }
+  .info-value.disabled { color: #bbb; }
+  .event-item { padding: 10px 0; border-bottom: 1px solid #f5f5f5; }
+  .event-item:last-child { border-bottom: none; }
+  .event-score { display: inline-block; font-weight: 700; font-size: 13px; padding: 2px 8px; border-radius: 4px; margin-right: 8px; }
+  .event-score.high { background: #ffebee; color: #c62828; }
+  .event-score.mid { background: #fff3e0; color: #e65100; }
+  .event-score.low { background: #e3f2fd; color: #1565c0; }
+  .event-title { font-size: 13px; font-weight: 600; margin: 4px 0; }
+  .event-meta { font-size: 11px; color: #888; }
+  .event-meta span { margin-right: 12px; }
+  .event-link { font-size: 11px; color: #3498db; text-decoration: none; }
+  .empty-box { text-align: center; color: #999; padding: 24px; font-size: 13px; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .empty-box code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 11px; color: #666; }
+  .load-box { text-align: center; color: #888; padding: 16px; font-size: 12px; }
+  .diff-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+  .diff-table th { text-align: left; padding: 5px 8px; border-bottom: 1px solid #eee; color: #999; font-weight: 500; }
+  .diff-table td { padding: 5px 8px; border-bottom: 1px solid #f5f5f5; }
+  .nav-content { display: none; }
+  .nav-content.active { display: block; }
+  .sidebar nav a[data-page] { position: relative; }
+  .sidebar nav a[data-page].active::after { content: "▸"; position: absolute; right: 16px; color: #3498db; }
+  @media (max-width: 768px) { .sidebar { width: 160px; } .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="app-layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="app-title">SaaS Console <small>Local MVP / SaaS Preview</small></div>
+    <nav>
+      <a data-page="overview" class="active" onclick="switchPage('overview')">Overview</a>
+      <a data-page="events" onclick="switchPage('events')">Events</a>
+      <a data-page="datasources" onclick="switchPage('datasources')">Data Sources</a>
+      <a data-page="draftreview" onclick="switchPage('draftreview')">Draft Review</a>
+      <a data-page="health" onclick="switchPage('health')">Health</a>
+      <a data-page="rules" onclick="switchPage('rules')">Rules</a>
+      <a data-page="notifications" onclick="switchPage('notifications')">Notifications</a>
+      <a data-page="pipeline" onclick="switchPage('pipeline')">Pipeline</a>
+      <a data-page="watchlists" onclick="switchPage('watchlists')">Watchlists</a>
+      <a data-page="settings" onclick="switchPage('settings')">Settings</a>
+    </nav>
+    <div class="env-label">Environment: Local MVP</div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Safety Bar -->
+    <div class="safety-bar" id="safetyBar">
+      <span class="safety-tag ok">● No Apply</span>
+      <span class="safety-tag ok">● Production Disabled</span>
+      <span class="safety-tag ok">● WeChat Dry-run</span>
+      <span class="safety-tag ok">● Hourly Paused</span>
+      <span class="safety-tag ok">● Direct RSS Default-off</span>
+      <span class="safety-tag info" id="namingGuardTag">Naming Guard: ...</span>
+    </div>
+
+    <!-- Content -->
+    <div class="content-area" id="contentArea">
+      <div class="load-box" id="loadIndicator">Loading SaaS Console data...</div>
+      <div id="pageContainer"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Page switching ────────────────────────────────────────────────
+function switchPage(page) {
+  document.querySelectorAll('.sidebar nav a').forEach(function(a) { a.classList.remove('active'); });
+  document.querySelector('.sidebar nav a[data-page="' + page + '"]').classList.add('active');
+  document.querySelectorAll('.nav-content').forEach(function(c) { c.classList.remove('active'); });
+  var el = document.getElementById('page-' + page);
+  if (el) el.classList.add('active');
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function fetchJSON(path) {
+  return fetch(path).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+}
+
+function val(v, fallback) { return v !== undefined && v !== null ? v : (fallback || '-'); }
+
+function tag(v, cls) { return '<span class="info-value ' + cls + '">' + v + '</span>'; }
+function item(l, v) { return '<div class="info-item"><span class="info-label">' + l + '</span>' + v + '</div>'; }
+function safe(v, p, f) { return v !== null && v !== undefined ? (v ? p : f || 'No') : 'unavailable'; }
+
+function wrapSection(title, content) {
+  return '<div class="section-title">' + title + '</div>' + content;
+}
+
+// ── Load all data ─────────────────────────────────────────────────
+var SEC_NP_PATH = '../backend/output/notification_previews/sec_tesla_notification_previews.local.json';
+var secNP = null;
+var secNPError = null;
+var allData = {};
+
+function loadAll() {
+  document.getElementById('loadIndicator').style.display = 'block';
+  Promise.all([
+    fetchJSON('../backend/output/events_latest.json'),
+    fetchJSON('../backend/output/events_latest_with_direct_rss.json'),
+    fetchJSON('../backend/output/direct_rss_local_config_status_report.json'),
+    fetchJSON('../backend/output/local_config_validation_report.json'),
+    fetchJSON('../backend/output/local_config_draft_diff_report.json'),
+    fetchJSON('../backend/output/local_config_draft_validation_report.json'),
+    fetchJSON('../backend/output/wechat_push_dry_run_report.json'),
+    fetchJSON('../docs/NAMING_GUARD_REPORT.json'),
+    fetchJSON('../backend/output/pipeline_status.json'),
+    // Load SEC notification previews — non-blocking, fails gracefully
+    fetchJSON(SEC_NP_PATH).then(function(d) {
+      if (d) { secNP = d; secNPError = null; }
+      else { secNP = null; secNPError = 'fetch returned empty/null'; }
+    }).catch(function(e) {
+      secNP = null; secNPError = 'Fetch error: ' + e.message;
+    }),
+  ]).then(function(results) {
+    allData = {
+      events: results[0],
+      eventsDr: results[1],
+      drConfig: results[2],
+      configVal: results[3],
+      diffReport: results[4],
+      valReport: results[5],
+      wechatDr: results[6],
+      namingGuard: results[7],
+      pipelineStatus: results[8],
+    };
+    document.getElementById('loadIndicator').style.display = 'none';
+    try { renderAll(); }
+    catch (e) {
+      var container = document.getElementById('pageContainer');
+      if (container) container.innerHTML = '<div class="empty-box" style="color:#c62828;padding:24px;"><strong>UI Render Error</strong><br><pre style="font-size:11px;text-align:left;overflow:auto;margin-top:8px;background:#f5f5f5;padding:8px;border-radius:4px;">' + (e.message || e.toString()) + '</pre></div>';
+    }
+  });
+}
+
+// ── Render ────────────────────────────────────────────────────────
+function renderAll() {
+  var d = allData;
+  var container = document.getElementById('pageContainer');
+
+  // Safety bar: Naming Guard
+  var ngStatus = d.namingGuard ? (d.namingGuard.status || d.namingGuard.NAMING_GUARD_STATUS || 'unknown') : 'unknown';
+  document.getElementById('namingGuardTag').textContent = 'Naming Guard: ' + ngStatus.toUpperCase();
+
+  var html = '';
+  html += renderOverview(d);
+  html += renderEvents(d);
+  html += renderDataSources(d);
+  html += renderDraftReview(d);
+  html += renderHealth(d);
+  html += renderRules(d);
+  html += renderNotifications(d);
+  html += renderPipeline(d);
+  html += renderWatchlists();
+  html += renderDashboard();
+  html += renderDBDashboard();
+  html += renderSettings(d);
+  container.innerHTML = html;
+}
+
+// ── Overview ──────────────────────────────────────────────────────
+function renderOverview(d) {
+  var evts = d.events ? (d.events.events || d.events || []) : [];
+  var evtsDr = d.eventsDr ? (d.eventsDr.events || d.eventsDr || []) : [];
+  var drCfg = d.drConfig;
+  var cfgVal = d.configVal;
+  var valRpt = d.valReport;
+  var wcDr = d.wechatDr;
+
+  // SEC notification previews KPIs
+  var secNPcount = secNP ? (secNP.notification_preview_count || 0) : 0;
+  var secHIGH = 0, secMED = 0;
+  if (secNP && secNP.previews) {
+    secNP.previews.forEach(function(p) {
+      if (p.priority === 'HIGH') secHIGH++;
+      else if (p.priority === 'MEDIUM') secMED++;
+    });
+  }
+  var kpi = '<div class="kpi-row">';
+  kpi += '<div class="kpi-card"><div class="kpi-num">' + evts.length + '</div><div class="kpi-label">Events (main)</div></div>';
+  kpi += '<div class="kpi-card"><div class="kpi-num">' + evtsDr.length + '</div><div class="kpi-label">Events (w/ Direct RSS)</div></div>';
+  kpi += '<div class="kpi-card"><div class="kpi-num">' + evts.filter(function(e) { return (e.score && e.score.total_score >= 80) || e.score >= 80; }).length + '</div><div class="kpi-label">High Score Events</div></div>';
+  kpi += '<div class="kpi-card"><div class="kpi-num">23</div><div class="kpi-label">Pipeline Runs (demo)</div></div>';
+  kpi += '<div class="kpi-card"><div class="kpi-num" style="color:' + (secNPcount > 0 ? '#1565c0' : '#bbb') + ';">' + secNPcount + '</div><div class="kpi-label">SEC Notification Previews</div></div>';
+  kpi += '<div class="kpi-card"><div class="kpi-num" style="color:#c62828;">' + secHIGH + '</div><div class="kpi-label">SEC HIGH</div></div>';
+  kpi += '<div class="kpi-card"><div class="kpi-num" style="color:#e65100;">' + secMED + '</div><div class="kpi-label">SEC MEDIUM</div></div>';
+  kpi += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#2e7d32;">DISABLED</div><div class="kpi-label">SEC Send Status</div></div>';
+  kpi += '</div>';
+
+  var statusGrid = '<div class="card"><div class="card-title">System Status</div><div class="grid-4">';
+  statusGrid += item('Local Config', tag(safe(d.configVal, 'Validated', 'Not validated'), d.configVal ? 'pass' : 'disabled'));
+  statusGrid += item('Direct RSS Config', tag(safe(drCfg, 'OK', 'N/A'), drCfg ? 'pass' : 'disabled'));
+  statusGrid += item('Draft Validation', tag(valRpt && valRpt.status === 'pass' ? 'Pass' : 'N/A', 'pass'));
+  statusGrid += item('WeChat Dry-run', tag(wcDr ? 'Available' : 'N/A', wcDr ? 'pass' : 'disabled'));
+  statusGrid += item('Production', tag('Disabled', 'pass'));
+  statusGrid += item('Hourly', tag('Paused', 'pass'));
+  statusGrid += item('Main Output', tag('events_latest.json', 'info'));
+  statusGrid += item('Direct RSS', tag('Default-off', 'pass'));
+  statusGrid += '</div></div>';
+
+  return wrapSection('Overview', kpi + statusGrid);
+}
+
+// ── Events ────────────────────────────────────────────────────────
+function renderEvents(d) {
+  var raw = d.events ? (d.events.events || d.events) : [];
+  var list = Array.isArray(raw) ? raw.slice(0, 10) : [];
+  if (!list.length) return wrapSection('Events', '<div class="empty-box">No events available — run pipeline first.<br><code>Main Output: events_latest.json</code></div>');
+
+  var h = '<div class="card"><div class="card-title">Event List <span style="font-size:11px;font-weight:400;color:#888;">(top 10 · Main Output: events_latest.json)</span></div>';
+  list.forEach(function(e) {
+    var sc = e.score ? (e.score.total_score || e.score) : 0;
+    var scClass = sc >= 80 ? 'high' : sc >= 60 ? 'mid' : 'low';
+    var kw = e.keywords ? (Array.isArray(e.keywords) ? e.keywords.join(', ') : e.keywords) : '';
+    var src = e.source || e.source_type || '-';
+    var link = e.link || e.url || '#';
+    h += '<div class="event-item">';
+    h += '<span class="event-score ' + scClass + '">' + sc + '</span>';
+    h += '<span style="font-size:11px;color:#888;">' + (e.event_type || '-') + '</span>';
+    h += '<div class="event-title">' + (e.title || e.title_zh || '-') + '</div>';
+    h += '<div class="event-meta"><span>source: ' + src + '</span><span>priority: ' + (e.priority || '-') + '</span><span>keywords: ' + kw + '</span></div>';
+    if (link !== '#') h += '<a class="event-link" href="' + link + '" target="_blank">\u2197 Open link</a>';
+    h += '</div>';
+  });
+  h += '</div>';
+  h += '<div class="empty-box" style="font-size:11px;">Data source: events_latest.json · Direct RSS preview available via toggle (not implemented in prototype)</div>';
+  return wrapSection('Events', h);
+}
+
+// ── Data Sources ──────────────────────────────────────────────────
+function renderDataSources(d) {
+  var dr = d.drConfig;
+  var gnStatus = d.events ? 'enabled' : 'unavailable';
+  var drEnabled = dr ? (dr.direct_rss_preview_enabled === true || dr.direct_rss_production_enabled === true ? 'enabled' : 'disabled') : 'unavailable';
+  var drProd = dr ? (dr.direct_rss_production_enabled === true ? 'enabled' : 'disabled') : 'unavailable';
+  var drPreview = dr ? (dr.direct_rss_preview_enabled === true ? 'preview available' : 'not enabled') : 'unavailable';
+
+  var h = '<div class="card"><div class="card-title">Data Source Status</div><div class="grid-2">';
+  h += item('Google News RSS', tag(gnStatus, gnStatus === 'enabled' ? 'pass' : 'disabled'));
+  h += item('Direct RSS Preview', tag(drPreview, drPreview === 'preview available' ? 'pass' : 'disabled'));
+  h += item('Direct RSS Production', tag(drProd, drProd === 'disabled' ? 'pass' : 'fail'));
+  h += item('Main Output', tag('events_latest.json', 'info'));
+  h += item('Direct RSS Default-off', tag('Yes', 'pass'));
+  h += item('events_latest remains main', tag('Yes', 'pass'));
+  h += '</div></div>';
+
+  return wrapSection('Data Sources', h);
+}
+
+// ── Draft Review ──────────────────────────────────────────────────
+function renderDraftReview(d) {
+  var diff = d.diffReport;
+  var valReport = d.valReport;
+
+  if (!diff && !valReport) {
+    return wrapSection('Draft Review', '<div class="card"><div class="card-title">Draft Review <span style="font-size:11px;font-weight:400;color:#888;">&middot; No Apply Action Available</span></div><div class="empty-box">No draft data available — run <code>local_config_low_risk_draft_generator.py</code> first.</div></div>');
+  }
+
+  var h = '<div class="card"><div class="card-title">Draft Review <span style="font-size:11px;font-weight:400;color:#888;">&middot; No Apply Action Available</span></div>';
+
+  // Changed Fields
+  if (diff && diff.changed_fields && diff.changed_fields.length > 0) {
+    h += '<div style="font-size:12px;font-weight:600;color:#555;margin:8px 0 4px;">Changed Fields</div>';
+    h += '<table class="diff-table"><tr><th>Field Path</th><th>Old</th><th>New</th><th>Risk</th><th>Blocked</th></tr>';
+    diff.changed_fields.forEach(function(f) {
+      h += '<tr><td>' + (f.field_path || '-') + '</td><td>' + val(f.old_value) + '</td><td>' + val(f.new_value) + '</td><td>' + (f.risk_level || '-') + '</td><td>' + (f.blocked ? 'yes' : 'no') + '</td></tr>';
+    });
+    h += '</table>';
+  } else {
+    h += '<div class="info-item"><span class="info-label">Changed Fields</span><span class="info-value disabled">None</span></div>';
+  }
+
+  // Validation
+  if (valReport) {
+    h += '<div style="font-size:12px;font-weight:600;color:#555;margin:12px 0 4px;">Validation</div><div class="grid-3">';
+    h += item('Status', tag(valReport.status === 'pass' ? 'Pass' : 'Fail', valReport.status === 'pass' ? 'pass' : 'fail'));
+    h += item('Allowed Changes', tag(valReport.allowed_field_changes ? valReport.allowed_field_changes.length : 0, 'pass'));
+    h += item('Blocked Changes', tag(valReport.blocked_field_changes ? valReport.blocked_field_changes.length : 0, 'pass'));
+    h += item('Sensitive Violations', tag(valReport.sensitive_field_violations ? valReport.sensitive_field_violations.length : 0, 'pass'));
+    h += item('Forbidden Changes', tag(valReport.forbidden_field_changes ? valReport.forbidden_field_changes.length : 0, 'pass'));
+    h += item('Requires Confirm', tag(valReport.requires_confirm_changes ? valReport.requires_confirm_changes.length : 0, 'pass'));
+    h += '</div>';
+
+    h += '<div style="font-size:12px;font-weight:600;color:#555;margin:12px 0 4px;">Safety</div><div class="grid-3">';
+    h += item('Production Disabled', tag(valReport.production_still_disabled ? 'Yes' : 'No', valReport.production_still_disabled ? 'pass' : 'fail'));
+    h += item('Config Unchanged', tag(valReport.official_config_hashes_unchanged ? 'Yes' : 'No', valReport.official_config_hashes_unchanged ? 'pass' : 'fail'));
+    h += item('Events Unchanged', tag(valReport.events_latest_unchanged ? 'Yes' : 'No', valReport.events_latest_unchanged ? 'pass' : 'fail'));
+    h += '</div>';
+  }
+
+  h += '<div style="margin-top:10px;padding:8px 12px;background:#f5f5f5;border-radius:4px;font-size:11px;color:#888;text-align:center;">No Apply Action Available &middot; Review Only</div>';
+  h += '</div>';
+  return wrapSection('Draft Review', h);
+}
+
+// ── Health ─────────────────────────────────────────────────────────
+function renderHealth(d) {
+  var ng = d.namingGuard;
+  var ngStatus = ng ? (ng.status || ng.NAMING_GUARD_STATUS || 'unknown') : 'unknown';
+  var cfgValOk = d.configVal ? 'pass' : 'disabled';
+  var drCfgOk = d.drConfig ? 'pass' : 'disabled';
+  var valOk = d.valReport && d.valReport.status === 'pass' ? 'pass' : 'disabled';
+  var fc = d.valReport ? (d.valReport.failed_checks || []) : [];
+  var wn = d.valReport ? (d.valReport.warnings || []) : [];
+
+  var h = '<div class="card"><div class="card-title">Health Status</div><div class="grid-3">';
+  h += item('Local Config Validation', tag(cfgValOk === 'pass' ? 'Pass' : 'N/A', cfgValOk));
+  h += item('Direct RSS Config', tag(drCfgOk === 'pass' ? 'OK' : 'N/A', drCfgOk));
+  h += item('Draft Validation', tag(valOk === 'pass' ? 'Pass' : 'N/A', valOk));
+  h += item('Naming Guard', tag(ngStatus.toUpperCase(), ngStatus === 'pass' ? 'pass' : 'warn'));
+  h += item('Failed Checks', tag(fc.length, fc.length > 0 ? 'fail' : 'pass'));
+  h += item('Warnings', tag(wn.length, wn.length > 0 ? 'warn' : 'pass'));
+  h += '</div>';
+
+  if (fc.length > 0) { h += '<div style="margin-top:8px;font-size:12px;color:#c62828;">';
+    fc.forEach(function(c) { h += '<div>\u26a0 ' + c + '</div>'; }); h += '</div>'; }
+  if (wn.length > 0) { h += '<div style="margin-top:8px;font-size:12px;color:#e65100;">';
+    wn.forEach(function(w) { h += '<div>\u26a0 ' + w + '</div>'; }); h += '</div>'; }
+
+  h += '</div>';
+  return wrapSection('Health', h);
+}
+
+// ── Rules (P1 placeholder) ────────────────────────────────────────
+function renderRules(d) {
+  var h = '<div class="card"><div class="card-title">Rules <span style="font-size:11px;font-weight:400;color:#888;">&middot; Read-only placeholder</span></div>';
+  h += '<div class="empty-box">Rules page coming in next phase. Current rules are read-only in Local Config Overview.</div>';
+  h += '</div>';
+  return wrapSection('Rules', h);
+}
+
+// ── Notifications (P1) ────────────────────────────────────────────
+function renderNotifications(d) {
+  var wc = d.wechatDr;
+  var h = '<div class="card"><div class="card-title">Notifications <span style="font-size:11px;font-weight:400;color:#888;">&middot; Dry-run only</span></div>';
+  h += '<div class="grid-2">';
+  h += item('WeChat Push Enabled', tag(wc ? (wc.enabled || wc.push_enabled ? 'true' : 'false') : 'N/A', wc ? 'pass' : 'disabled'));
+  h += item('WeChat Dry-run', tag(wc ? 'Active' : 'N/A', wc ? 'pass' : 'disabled'));
+  h += item('Real Send', tag('Disabled (blocked)', 'pass'));
+  h += item('Webhook Configured', tag('Not displayed', 'disabled'));
+  h += '</div></div>';
+
+  // ── SEC Notification Previews section ──
+  h += '<div class="card">';
+  h += '<div class="card-title">SEC Notification Previews (Local Only) <span style="font-size:11px;font-weight:400;color:#888;">&middot; PREVIEW_ONLY / DO_NOT_SEND</span></div>';
+  if (secNPError) {
+    h += '<div class="empty-box" style="color:#e65100;">';
+    h += '<strong>SEC notification preview file may not be readable.</strong><br>';
+    h += 'Reason: ' + secNPError + '<br><br>';
+    h += 'Use a local HTTP server to serve the file, or paste/import JSON in a future step.<br>';
+    h += '<span style="color:#bbb;">Expected: 27 notification previews &middot; Path: backend/output/notification_previews/sec_tesla_notification_previews.local.json</span>';
+    h += '</div>';
+  } else if (!secNP || !secNP.previews || secNP.previews.length === 0) {
+    h += '<div class="empty-box">No SEC notification previews available.</div>';
+  } else {
+    h += '<div class="grid-4" style="margin-bottom:12px;">';
+    h += item('Previews Loaded', '<span class="info-value">' + secNP.previews.length + '</span>');
+    h += item('Delivery Channel', '<span class="info-value warn" style="color:#e65100;font-weight:700;">PREVIEW_ONLY</span>');
+    h += item('Send Status', '<span class="info-value pass">DISABLED</span>');
+    h += item('Webhook Status', '<span class="info-value pass">NOT_RUN</span>');
+    h += item('Production Status', '<span class="info-value pass">DISABLED</span>');
+    h += '</div>';
+    secNP.previews.forEach(function(p) {
+      var scClass = p.priority === 'HIGH' ? 'high' : 'mid';
+      h += '<div class="event-item" style="border:1px solid #f0f0f0;border-radius:6px;padding:12px;margin-bottom:8px;">';
+      h += '<span class="event-score ' + scClass + '">' + (p.score || '?') + '</span>';
+      h += '<span style="font-size:11px;color:#888;">' + (p.event_type || '-') + '</span>';
+      h += '<span style="float:right;font-size:10px;color:#e65100;font-weight:700;">PREVIEW_ONLY</span>';
+      h += '<div class="event-title">' + (p.message_title || '-') + '</div>';
+      h += '<div class="event-meta">';
+      h += '<span>priority: ' + (p.priority || '-') + '</span>';
+      h += '<span>materiality: ' + (p.materiality_hint || '-') + '</span>';
+      h += '<span>send: ' + (p.send_status || 'DISABLED') + '</span>';
+      h += '<span>webhook: ' + (p.webhook_status || 'NOT_RUN') + '</span>';
+      h += '<span>prod: ' + (p.production_status || 'DISABLED') + '</span>';
+      h += '</div>';
+      if (p.evidence_url) h += '<a class="event-link" href="' + p.evidence_url + '" target="_blank">\u2197 Evidence</a>';
+      h += '<div style="font-size:11px;color:#666;margin-top:4px;padding:4px 8px;background:#fafafa;border-radius:4px;">' + (p.message_body || '') + '</div>';
+      h += '</div>';
+    });
+    h += '<div style="text-align:center;padding:8px;font-size:11px;color:#e65100;font-weight:600;">';
+    h += 'PREVIEW_ONLY / DO_NOT_SEND &middot; Send: DISABLED &middot; Webhook: NOT_RUN &middot; Production: DISABLED';
+    h += '</div>';
+  }
+  h += '</div>';
+  return wrapSection('Notifications', h);
+}
+
+// ── Pipeline (P1) ─────────────────────────────────────────────────
+function renderPipeline(d) {
+  var ps = d.pipelineStatus;
+  var lastRun = ps ? (ps.last_run_at || 'N/A') : 'N/A';
+  var h = '<div class="card"><div class="card-title">Pipeline <span style="font-size:11px;font-weight:400;color:#888;">&middot; Status only</span></div>';
+  h += '<div class="grid-2">';
+  h += item('Run Frequency', tag(ps ? (ps.run_frequency || 'manual') : 'manual', 'info'));
+  h += item('Scheduled Run', tag('Disabled (manual)', 'pass'));
+  h += item('Hourly', tag('Paused', 'pass'));
+  h += item('Last Run', tag(lastRun, 'info'));
+  h += item('Direct RSS Stage', tag('Default-off (optional)', 'pass'));
+  h += item('Production', tag('Disabled', 'pass'));
+  h += '</div></div>';
+  return wrapSection('Pipeline', h);
+}
+
+// ── Watchlists (P1 API-backed read-only) ───────────────────────────
+var WATCHLIST_API_BASE = 'http://127.0.0.1:8765';
+var WATCHLIST_DEFAULT_ID = 'tsla_watchlist_draft_v1';
+
+function fetchWatchlistAPI(path) {
+  return fetch(WATCHLIST_API_BASE + path).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+}
+
+var watchlistApiStatus = null;
+var watchlistDetail = null;
+var watchlistDraftReview = null;
+var watchlistSafety = null;
+var watchlistDataLoaded = false;
+
+function loadWatchlistData() {
+  if (watchlistDataLoaded) return;
+  watchlistDataLoaded = true;
+  fetchWatchlistAPI('/api/watchlists').then(function(wlData) {
+    if (!wlData || wlData.status !== 'ok') {
+      watchlistApiStatus = 'unavailable';
+      reRenderWatchlists();
+      return;
+    }
+    watchlistApiStatus = 'ok';
+    var wid = WATCHLIST_DEFAULT_ID;
+    if (wlData.data && wlData.data.watchlists && wlData.data.watchlists.length > 0) {
+      wid = wlData.data.watchlists[0].watchlist_id || wid;
+    }
+    // Fetch detail, draft-review, safety in parallel
+    Promise.all([
+      fetchWatchlistAPI('/api/watchlists/' + wid),
+      fetchWatchlistAPI('/api/watchlists/' + wid + '/draft-review'),
+      fetchWatchlistAPI('/api/watchlists/' + wid + '/safety'),
+    ]).then(function(results) {
+      watchlistDetail = results[0];
+      watchlistDraftReview = results[1];
+      watchlistSafety = results[2];
+      reRenderWatchlists();
+    });
+  });
+}
+
+function reRenderWatchlists() {
+  var el = document.getElementById('page-watchlists');
+  if (!el) return;
+  var newHtml = renderWatchlists();
+  // Extract just the inner content of page-watchlists from the fresh render,
+  // then replace the existing element's content to avoid nested page-watchlists divs
+  var tempDiv = document.createElement('div');
+  tempDiv.innerHTML = newHtml;
+  var newContent = tempDiv.querySelector('#page-watchlists');
+  if (newContent) {
+    el.innerHTML = newContent.innerHTML;
+  }
+}
+
+function renderWatchlists() {
+  loadWatchlistData();
+  var isUnavail = watchlistApiStatus === 'unavailable' || (watchlistApiStatus === null && !watchlistDataLoaded);
+
+  var h = '<div id="page-watchlists" class="nav-content">';
+
+  if (watchlistApiStatus === null) {
+    h += '<div class="load-box">⏳ Loading Watchlists ...</div>';
+    h += '</div>';
+    // Retry after short delay to trigger re-render when data arrives
+    setTimeout(function() {
+      var el = document.getElementById('page-watchlists');
+      if (el && watchlistApiStatus === null) {
+        watchlistDataLoaded = false;
+        el.innerHTML = '<div class="load-box">⏳ Loading Watchlists ...</div>';
+        loadWatchlistData();
+      } else if (el && watchlistApiStatus !== null) {
+        reRenderWatchlists();
+      }
+    }, 500);
+    return h;
+  }
+
+  if (isUnavail) {
+    h += wrapSection('Watchlists', '<div class="card"><div class="card-title">Watchlist API <span style="font-size:11px;font-weight:400;color:#888;">&middot; Read-only &middot; No Apply Action Available</span></div>' +
+      '<div class="empty-box">Watchlist API unavailable. Start the API with:<br><code style="font-size:12px;background:#eef;padding:2px 6px;border-radius:4px;">py -3.12 backend/app/read_only_api.py</code><br>' +
+      '<span style="font-size:12px;color:#999;">API endpoint: ' + WATCHLIST_API_BASE + '/api/watchlists</span><br><br>' +
+      '<span style="font-size:11px;color:#bbb;">Read-only mode preserved &middot; No Apply Action Available &middot; Real Send Disabled &middot; Production Disabled</span></div></div>');
+    h += '</div>';
+    return h;
+  }
+
+  // A. API Status
+  h += '<div class="section-title">Watchlists <span style="font-size:11px;font-weight:400;color:#888;">API-backed &middot; Read-only &middot; No Apply Action Available</span></div>';
+  h += '<div class="card"><div class="card-title">API Status</div><div class="grid-4">';
+  h += item('API Base', '<span class="info-value" style="font-size:11px;">' + WATCHLIST_API_BASE + '</span>');
+  h += item('API Status', tag('Available', 'pass'));
+  h += item('Mode', tag('Read-only', 'info'));
+  h += item('Write Enabled', tag('No', 'pass'));
+  h += item('Real Send Enabled', tag('No', 'pass'));
+  h += item('Production Enabled', tag('No', 'pass'));
+  h += item('Pipeline Enabled', tag('No', 'pass'));
+  h += item('Source Ingestion', '<span class="info-value disabled">Not connected</span>');
+  h += '</div></div>';
+
+  // B. Watchlist Detail (from detail endpoint)
+  if (watchlistDetail && watchlistDetail.status === 'ok' && watchlistDetail.data && watchlistDetail.data.watchlist) {
+    var wl = watchlistDetail.data.watchlist;
+    h += '<div class="card"><div class="card-title">Watchlist Detail</div><div class="grid-3">';
+    h += item('Watchlist Name', '<span class="info-value">' + val(wl.watchlist_name) + '</span>');
+    h += item('Primary Symbol', '<span class="info-value">' + val(wl.primary_symbol) + '</span>');
+    h += item('Primary Company', '<span class="info-value">' + val(wl.primary_company) + '</span>');
+    h += item('Status', '<span class="info-value">' + val(wl.status) + '</span>');
+    h += item('Draft Status', '<span class="info-value">' + val(wl.draft_status) + '</span>');
+    h += item('Default Mode', '<span class="info-value">' + val(wl.default_mode) + '</span>');
+    h += item('Tracked Symbol Count', '<span class="info-value">' + val(wl.tracked_symbol_count) + '</span>');
+    h += item('Source Group', '<span class="info-value">' + val(wl.source_group_name) + '</span>');
+    h += item('Source Verified', tag(val(wl.source_candidates_verified), wl.source_candidates_verified ? 'warn' : 'pass'));
+    h += item('Scoring Profile', '<span class="info-value">' + val(wl.scoring_profile_name) + '</span>');
+    h += item('Notification Policy', '<span class="info-value">' + val(wl.notification_policy_name) + '</span>');
+    h += item('Description', '<span class="info-value" style="font-size:11px;font-weight:400;">' + (wl.description || '-') + '</span>');
+    h += '</div></div>';
+
+    // Weights summary
+    if (wl.weights) {
+      h += '<div class="card"><div class="card-title">Weights (S/R/M/U)</div><div class="grid-4">';
+      h += item('Source', '<span class="info-value">' + val(wl.weights.source) + '</span>');
+      h += item('Relevance', '<span class="info-value">' + val(wl.weights.relevance) + '</span>');
+      h += item('Market', '<span class="info-value">' + val(wl.weights.market) + '</span>');
+      h += item('Urgency', '<span class="info-value">' + val(wl.weights.urgency) + '</span>');
+      h += '</div></div>';
+    }
+  } else {
+    h += '<div class="card"><div class="card-title">Watchlist Detail</div><div class="empty-box">Watchlist detail unavailable.</div></div>';
+  }
+
+  // C. Draft Review
+  if (watchlistDraftReview && watchlistDraftReview.status === 'ok' && watchlistDraftReview.data && watchlistDraftReview.data.draft_review) {
+    var dr = watchlistDraftReview.data.draft_review;
+    h += '<div class="card"><div class="card-title">Draft Review <span style="font-size:11px;font-weight:400;color:#888;">&middot; Read-only &middot; No Apply Action Available</span></div><div class="grid-3">';
+    h += item('Draft ID', '<span class="info-value">' + val(dr.draft_id) + '</span>');
+    h += item('Draft Type', '<span class="info-value">' + val(dr.draft_type) + '</span>');
+    h += item('Draft Status', '<span class="info-value">' + val(dr.draft_status) + '</span>');
+    h += item('Validation Status', tag(val(dr.validation_status), dr.validation_status === 'safe_draft' ? 'pass' : 'warn'));
+    h += item('No Apply Action Available', tag(safeBool(dr.no_apply_action_available), 'pass'));
+    h += item('Source Candidates Verified', tag(safeBool(dr.source_candidates_verified), 'pass'));
+    h += '</div></div>';
+  } else {
+    h += '<div class="card"><div class="card-title">Draft Review</div><div class="empty-box">Draft review unavailable.</div></div>';
+  }
+
+  // D. Safety Status
+  if (watchlistSafety && watchlistSafety.status === 'ok' && watchlistSafety.data && watchlistSafety.data.safety) {
+    var sf = watchlistSafety.data.safety.safety_flags || {};
+    h += '<div class="card"><div class="card-title">Safety Status</div><div class="grid-4">';
+    h += item('Preview Only', tag(safeBool(sf.preview_only), sf.preview_only ? 'pass' : 'fail'));
+    h += item('Real Send Enabled', tag(safeBool(sf.real_send_enabled), sf.real_send_enabled ? 'fail' : 'pass'));
+    h += item('Production Enabled', tag(safeBool(sf.production_enabled), sf.production_enabled ? 'fail' : 'pass'));
+    h += item('Apply Allowed', tag(safeBool(sf.apply_allowed), sf.apply_allowed ? 'fail' : 'pass'));
+    h += item('Write Enabled', tag(safeBool(sf.write_enabled), sf.write_enabled ? 'fail' : 'pass'));
+    h += item('Hourly Enabled', tag(safeBool(sf.hourly_enabled), sf.hourly_enabled ? 'fail' : 'pass'));
+    h += item('Pipeline Run Enabled', tag(safeBool(sf.pipeline_run_enabled), sf.pipeline_run_enabled ? 'fail' : 'pass'));
+    h += item('Source Candidates Verified', tag(safeBool(sf.source_candidates_verified), sf.source_candidates_verified ? 'warn' : 'pass'));
+    h += '</div>';
+    h += '<div style="margin-top:10px;padding:8px 12px;background:#f5f5f5;border-radius:4px;font-size:11px;color:#888;text-align:center;">';
+    h += 'No Apply Action Available &middot; No Send &middot; Production Disabled &middot; No Pipeline Run</div>';
+    h += '</div>';
+  } else {
+    h += '<div class="card"><div class="card-title">Safety Status</div><div class="empty-box">Safety status unavailable.</div></div>';
+  }
+
+  // E. Scoring Validation Hold Card
+  h += '<div class="card"><div class="card-title">Scoring Validation Hold</div><div class="grid-3">';
+  h += item('Validation Package', '<span class="info-value">TSLA scoring validation</span>');
+  h += item('State', '<span class="info-value warn" style="color:#e65100;">DESIGN_PACKAGE_HOLD</span>');
+  h += item('Sample Count', '<span class="info-value">18</span>');
+  h += item('High / Medium / Low-Noise', '<span class="info-value">7 / 6 / 5</span>');
+  h += item('Actual Scoring', '<span class="info-value disabled">NOT_RUN</span>');
+  h += item('Result State', '<span class="info-value disabled">PENDING</span>');
+  h += item('Fixture', '<span class="info-value disabled">NOT_CREATED</span>');
+  h += item('Runtime Harness', '<span class="info-value disabled">NOT_CREATED</span>');
+  h += item('Validation Output', '<span class="info-value disabled">NOT_CREATED</span>');
+  h += item('Real Send', '<span class="info-value pass">DISABLED</span>');
+  h += item('Production', '<span class="info-value pass">DISABLED</span>');
+  h += '</div></div>';
+
+  // F. Preview Candidates Placeholder
+  h += '<div class="card"><div class="card-title">Preview Candidates</div>';
+  h += '<div class="empty-box">';
+  h += 'Preview candidates: <strong>Not available</strong><br>';
+  h += 'Reason: No source ingestion / no scoring runtime / no pipeline<br>';
+  h += '<span style="color:#bbb;">Real Send: Disabled &middot; Production: Disabled</span>';
+  h += '</div></div>';
+
+  // G. Roadmap Status Card
+  h += '<div class="card"><div class="card-title">Roadmap Status</div><div class="grid-3">';
+  h += item('Current State', '<span class="info-value">PROJECT_MASTER_HOLD / RUNTIME_HOLD</span>');
+  h += item('Handoff Capsule', '<span class="info-value" style="font-size:11px;">docs/PROJECT_HANDOFF_PACKAGE_367E.md</span>');
+  h += item('Recovery Entrypoint', '<span class="info-value" style="font-size:11px;">docs/PROJECT_MASTER_HOLD_SUMMARY_367A.md</span>');
+  h += item('Frontend Branch', '<span class="info-value pass">authorized for read-only UI implementation only</span>');
+  h += item('Local Fixture Branch', '<span class="info-value pass">NOT_AUTHORIZED</span>');
+  h += item('Source Ingestion', '<span class="info-value disabled">NOT_RUN</span>');
+  h += item('Pipeline', '<span class="info-value disabled">NOT_RUN</span>');
+  h += item('Scoring Runtime', '<span class="info-value disabled">NOT_RUN</span>');
+  h += item('Real Send', '<span class="info-value pass">DISABLED</span>');
+  h += item('Production', '<span class="info-value pass">DISABLED</span>');
+  h += '</div></div>';
+
+  // I. TSLA Review Queue (batch review adapter, read-only)
+  h += '<div class="card"><div class="card-title" style="font-size:16px;color:#1565c0;">➕ TSLA Review Queue</div>';
+  // Safety Banner
+  h += '<div style="padding:10px 14px;background:#fff3e0;border-left:4px solid #e65100;border-radius:4px;margin-bottom:12px;font-size:12px;line-height:1.8;">';
+  h += '<strong style="color:#e65100;">Current mode: Review only</strong><br>';
+  h += '\u274c No Enterprise WeChat send<br>';
+  h += '\u274c No webhook call<br>';
+  h += '\u274c No production<br>';
+  h += '\u274c No scheduler<br>';
+  h += '\u274c No retry<br>';
+  h += '<span style="color:#888;">Manual authorization required before any future send</span>';
+  h += '</div>';
+
+  // Summary Cards
+  h += '<div class="grid-4" style="margin-bottom:10px;">';
+  h += '<div class="kpi-card"><div class="kpi-num">TSLA</div><div class="kpi-label">Watchlist</div></div>';
+  h += '<div class="kpi-card"><div class="kpi-num">SEC</div><div class="kpi-label">Source</div></div>';
+  h += '<div class="kpi-card"><div class="kpi-num" style="color:#2e7d32;">3</div><div class="kpi-label">Delivered HIGH</div></div>';
+  h += '<div class="kpi-card"><div class="kpi-num" style="color:#e65100;">4</div><div class="kpi-label">Remaining HIGH</div></div>';
+  h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#2e7d32;">Disabled</div><div class="kpi-label">Auto-send</div></div>';
+  h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#2e7d32;">Disabled</div><div class="kpi-label">Production</div></div>';
+  h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#2e7d32;">Disabled</div><div class="kpi-label">Scheduler</div></div>';
+  h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#2e7d32;">Disabled</div><div class="kpi-label">Retry</div></div>';
+  h += '</div>';
+
+  // Candidate Table
+  h += '<table class="diff-table" style="margin-bottom:10px;"><thead><tr>';
+  h += '<th>#</th><th>Event ID</th><th>Event Type</th><th>\u4e2d\u6587\u7c7b\u578b</th><th>Score</th><th>Priority</th><th>Delivered</th><th>Action</th><th>Status</th><th>Evidence</th>';
+  h += '</tr></thead><tbody>';
+  var reviewData = [
+    {"rank":1,"event_id":"sec_tsla_9633c147be68","event_type":"corporate_material_update","event_type_zh":"\u516c\u53f8\u91cd\u5927\u4e8b\u9879\u66f4\u65b0","score":95,"priority":"HIGH","delivered":false,"action":"REVIEW_ONLY","status":"PENDING","url":"https://www.sec.gov/Archives/edgar/data/1318605/000162828026003837/tsla-20260128.htm"},
+    {"rank":2,"event_id":"sec_tsla_44f2b03e2611","event_type":"periodic_report","event_type_zh":"\u5b9a\u671f\u62a5\u544a","score":95,"priority":"HIGH","delivered":false,"action":"REVIEW_ONLY","status":"PENDING","url":"https://www.sec.gov/Archives/edgar/data/1318605/000162828026003952/tsla-20251231.htm"},
+    {"rank":3,"event_id":"sec_tsla_4eecdb9337bb","event_type":"corporate_material_update","event_type_zh":"\u516c\u53f8\u91cd\u5927\u4e8b\u9879\u66f4\u65b0","score":95,"priority":"HIGH","delivered":false,"action":"REVIEW_ONLY","status":"PENDING","url":"https://www.sec.gov/Archives/edgar/data/1318605/000162828026022956/tsla-20260402.htm"},
+    {"rank":4,"event_id":"sec_tsla_04385336dade","event_type":"corporate_material_update","event_type_zh":"\u516c\u53f8\u91cd\u5927\u4e8b\u9879\u66f4\u65b0","score":95,"priority":"HIGH","delivered":false,"action":"REVIEW_ONLY","status":"PENDING","url":"https://www.sec.gov/Archives/edgar/data/1318605/000162828026026551/tsla-20260422.htm"}
+  ];
+  for (var ri = 0; ri < reviewData.length; ri++) {
+    var r = reviewData[ri];
+    h += '<tr>';
+    h += '<td>' + r.rank + '</td>';
+    h += '<td style="font-size:11px;">' + r.event_id + '</td>';
+    h += '<td>' + r.event_type + '</td>';
+    h += '<td>' + r.event_type_zh + '</td>';
+    h += '<td><strong>' + r.score + '</strong></td>';
+    h += '<td><span style="color:#c62828;font-weight:600;">' + r.priority + '</span></td>';
+    h += '<td>' + (r.delivered ? 'Yes' : '<span style="color:#2e7d32;">No</span>') + '</td>';
+    h += '<td><span style="color:#888;">' + r.action + '</span></td>';
+    h += '<td><span style="color:#e65100;">' + r.status + '</span></td>';
+    h += '<td><a href="' + r.url + '" target="_blank" style="color:#1565c0;font-size:11px;">View</a></td>';
+    h += '</tr>';
+  }
+  h += '</tbody></table>';
+
+  // Allowed Actions
+  h += '<div style="padding:8px 12px;background:#e8f5e9;border-radius:4px;margin-bottom:8px;font-size:11px;">';
+  h += '<strong>Allowed read-only actions:</strong> ';
+  h += 'VIEW_EVIDENCE \u00b7 COPY_EVENT_ID \u00b7 MARK_FOR_REVIEW \u00b7 GENERATE_CHINESE_PREVIEW \u00b7 CREATE_AUTHORIZATION_CHECKPOINT';
+  h += '</div>';
+
+  // Forbidden Actions Guardrail
+  h += '<div style="padding:8px 12px;background:#ffebee;border-radius:4px;margin-bottom:8px;font-size:11px;">';
+  h += '<strong style="color:#c62828;">Forbidden actions (NOT available):</strong> ';
+  h += 'SEND_NOW \u00b7 AUTO_SEND \u00b7 ENABLE_PRODUCTION \u00b7 ENABLE_SCHEDULER \u00b7 ENABLE_RETRY';
+  h += '</div>';
+
+  // Safety Gates
+  h += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:11px;padding:8px 0;">';
+  h += '<span><strong>real_send:</strong> <span style="color:#2e7d32;">NOT_RUN</span></span>';
+  h += '<span><strong>webhook_call:</strong> <span style="color:#2e7d32;">NOT_RUN</span></span>';
+  h += '<span><strong>manual_send_auth:</strong> <span style="color:#2e7d32;">false</span></span>';
+  h += '<span><strong>auto_send:</strong> <span style="color:#2e7d32;">DISABLED</span></span>';
+  h += '<span><strong>production:</strong> <span style="color:#2e7d32;">DISABLED</span></span>';
+  h += '<span><strong>scheduler:</strong> <span style="color:#2e7d32;">DISABLED</span></span>';
+  h += '<span><strong>retry:</strong> <span style="color:#2e7d32;">DISABLED</span></span>';
+  h += '<span><strong>history_modified:</strong> <span style="color:#2e7d32;">false</span></span>';
+  h += '</div>';
+
+  // API-Backed Snapshot Status
+  h += '<div style="padding:8px 12px;background:#e3f2fd;border-radius:4px;margin:8px 0;font-size:11px;border-left:4px solid #1565c0;">';
+  h += '<strong style="color:#1565c0;">API-Backed Snapshot</strong>';
+  h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:4px;">';
+  h += '<span><strong>API Mode:</strong> <span style="color:#1565c0;">READ_ONLY_FUNCTIONS</span></span>';
+  h += '<span><strong>HTTP Server:</strong> <span style="color:#888;">Not started</span></span>';
+  h += '<span><strong>Candidates:</strong> <span style="color:#1565c0;">4</span></span>';
+  h += '<span><strong>Scheduler Health:</strong> <span style="color:#2e7d32;">HEALTHY</span></span>';
+  h += '<span><strong>Snapshot File:</strong> <span style="font-size:10px;color:#888;">review_queue_api_snapshot.local.json</span></span>';
+  h += '<span><strong>Fetch Mode:</strong> <span style="color:#888;">static file, no HTTP server</span></span>';
+  h += '</div></div>';
+
+  h += '<div style="padding:6px 12px;background:#f5f5f5;border-radius:4px;font-size:10px;color:#bbb;text-align:center;">';
+  h += 'Adapter: tsla_batch_review_console_adapter.local.json &middot; No Send &middot; No Webhook &middot; No Production &middot; No Scheduler &middot; No Retry';
+  h += '</div></div>';
+
+  // H. Refresh button (GET-only)
+  h += '<div style="text-align:center;margin-top:12px;">';
+  h += '<button onclick="refreshWatchlists()" style="background:#3498db;color:#fff;border:none;padding:6px 16px;border-radius:4px;font-size:12px;cursor:pointer;">↻ Refresh Watchlists</button>';
+  h += '<span style="font-size:10px;color:#bbb;margin-left:8px;">GET-only &middot; Read-only &middot; No Apply</span>';
+  h += '</div>';
+
+  h += '</div>';
+  return h;
+}
+
+function safeBool(v) { return v === true || v === 'true' ? 'Yes' : 'No'; }
+
+function refreshWatchlists() {
+  watchlistDataLoaded = false;
+  watchlistApiStatus = null;
+  watchlistDetail = null;
+  watchlistDraftReview = null;
+  watchlistSafety = null;
+  var el = document.getElementById('page-watchlists');
+  if (el) { el.innerHTML = '<div class="load-box">⏳ Refreshing Watchlists ...</div>'; loadWatchlistData(); }
+  // reRenderWatchlists will be called automatically when data loads
+}
+
+// ── Project Status Dashboard (read-only) ──────────────────────────
+function renderDashboard() {
+  var snapPath = 'project_status_dashboard_snapshot.local.json';
+  try {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', snapPath, false);
+    xhr.send();
+    if (xhr.status === 200) {
+      var s = JSON.parse(xhr.responseText);
+      var h = '<div class="card"><div class="card-title" style="font-size:16px;color:#1565c0;">📊 Project Status Dashboard</div>';
+      h += '<div style="padding:10px 14px;background:#e3f2fd;border-left:4px solid #1565c0;border-radius:4px;margin-bottom:12px;font-size:12px;line-height:1.8;">';
+      h += '<strong>Dashboard Mode:</strong> ' + s.dashboard_mode + ' &middot; <strong>Project State:</strong> ' + s.project_state + '<br>';
+      h += '<strong>Task:</strong> ' + (s.scheduler ? s.scheduler.task_name : 'N/A') + ' | ';
+      h += '<strong>Health:</strong> <span style="color:#2e7d32;">' + (s.scheduler ? s.scheduler.health_status : 'N/A') + '</span> | ';
+      h += '<strong>Last Result:</strong> ' + (s.scheduler ? s.scheduler.last_result : 'N/A') + ' | ';
+      h += '<strong>Dry-Run:</strong> ' + (s.scheduler ? s.scheduler.latest_dry_run_status : 'N/A');
+      h += '</div>';
+      h += '<div class="grid-4" style="margin-bottom:10px;">';
+      h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#2e7d32;">' + (s.local_alert ? (s.local_alert.alert_required ? 'Required' : 'None') : 'N/A') + '</div><div class="kpi-label">Alert Required</div></div>';
+      h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#2e7d32;">' + (s.local_alert ? s.local_alert.alert_level : 'N/A') + '</div><div class="kpi-label">Alert Level</div></div>';
+      h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#2e7d32;">' + (s.review_queue ? s.review_queue.candidate_count : 'N/A') + '</div><div class="kpi-label">Candidates</div></div>';
+      h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#2e7d32;">' + (s.multi_watchlist ? s.multi_watchlist.watchlist_count : 'N/A') + '</div><div class="kpi-label">Watchlists</div></div>';
+      h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#2e7d32;">' + (s.multi_watchlist && s.multi_watchlist.enabled_watchlists ? s.multi_watchlist.enabled_watchlists.join(', ') : 'N/A') + '</div><div class="kpi-label">Enabled</div></div>';
+      h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#888;">' + (s.multi_watchlist && s.multi_watchlist.disabled_watchlists ? s.multi_watchlist.disabled_watchlists.join(', ') : 'N/A') + '</div><div class="kpi-label">Disabled</div></div>';
+      h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#888;">' + (s.review_queue ? s.review_queue.api_mode : 'N/A') + '</div><div class="kpi-label">API Mode</div></div>';
+      h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#888;">' + (s.safety ? 'NOT_RUN' : 'N/A') + '</div><div class="kpi-label">Real Send</div></div>';
+      h += '</div>';
+      // Safety Panel Footer
+      h += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:11px;padding:8px 0;">';
+      var sf = s.safety || {};
+      h += '<span><strong>real_send:</strong> <span style="color:#2e7d32;">' + (sf.real_send || 'NOT_RUN') + '</span></span>';
+      h += '<span><strong>webhook_call:</strong> <span style="color:#2e7d32;">' + (sf.webhook_call || 'NOT_RUN') + '</span></span>';
+      h += '<span><strong>history_mod:</strong> <span style="color:#2e7d32;">' + (sf.delivered_history_modified === false ? 'false' : 'true') + '</span></span>';
+      h += '<span><strong>production:</strong> <span style="color:#2e7d32;">' + (sf.production || 'DISABLED') + '</span></span>';
+      h += '<span><strong>retry:</strong> <span style="color:#2e7d32;">' + (sf.retry || 'DISABLED') + '</span></span>';
+      h += '<span><strong>auto_send:</strong> <span style="color:#2e7d32;">' + (sf.auto_send_enabled === false ? 'DISABLED' : 'ENABLED') + '</span></span>';
+      h += '<span><strong>sched_modified:</strong> <span style="color:#2e7d32;">' + (sf.scheduler_modified_by_this_step === false ? 'false' : 'true') + '</span></span>';
+      h += '<span><strong>sched_triggered:</strong> <span style="color:#2e7d32;">' + (sf.scheduler_triggered_by_this_step === false ? 'false' : 'true') + '</span></span>';
+      h += '</div>';
+      h += '<div style="padding:6px 12px;background:#f5f5f5;border-radius:4px;font-size:10px;color:#bbb;text-align:center;">Dashboard Snapshot: project_status_dashboard_snapshot.local.json &middot; Read-only &middot; No Apply Actions</div>';
+      h += '</div>';
+      return wrapSection('System Status', h);
+    }
+  } catch(e) {}
+  // Fallback snapshot status
+  var h = '<div class="card"><div class="card-title" style="font-size:16px;color:#1565c0;">📊 Project Status Dashboard</div>';
+  h += '<div class="empty-box">Dashboard snapshot not available.<br>Expected: project_status_dashboard_snapshot.local.json<br>Run: py -3.12 backend/app/export_project_status_dashboard_snapshot.py</div>';
+  h += '</div>';
+  return wrapSection('System Status', h);
+}
+
+// ── DB-Backed Dashboard Snapshot (read-only) ─────────────────────
+function renderDBDashboard() {
+  var snapPath = 'db_project_status_dashboard_snapshot.local.json';
+  try {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', snapPath, false);
+    xhr.send();
+    if (xhr.status === 200) {
+      var s = JSON.parse(xhr.responseText);
+      var h = '<div class="card"><div class="card-title" style="font-size:16px;color:#1565c0;">🗄️ DB-Backed Dashboard Snapshot</div>';
+      h += '<div style="padding:10px 14px;background:#e8f5e9;border-left:4px solid #2e7d32;border-radius:4px;margin-bottom:12px;font-size:12px;line-height:1.8;">';
+      h += '<strong>Snapshot Mode:</strong> ' + (s.snapshot_mode || 'N/A') + ' &middot; <strong>API Mode:</strong> ' + (s.api_mode || 'N/A') + '<br>';
+      h += '<strong>HTTP Server:</strong> ' + (s.http_server_started === false ? 'Not started' : 'Started') + ' &middot; <strong>POST Endpoints:</strong> ' + (s.post_endpoints_created === false ? 'None' : 'Present');
+      h += '</div>';
+      var db = s.database || {};
+      var wl = s.watchlists || {};
+      var rq = s.review_queue || {};
+      var de = s.delivered_events || {};
+      var sch = s.scheduler || {};
+      var alert = s.local_alert || {};
+      var safety = s.safety || {};
+      h += '<div class="grid-4" style="margin-bottom:10px;">';
+      h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#1565c0;">' + (db.total_rows || 0) + '</div><div class="kpi-label">DB Total Rows</div></div>';
+      h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#1565c0;">' + (wl.watchlists_count || 0) + '</div><div class="kpi-label">Watchlists</div></div>';
+      h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#1565c0;">' + (de.delivered_events_count || 0) + '</div><div class="kpi-label">Delivered Events</div></div>';
+      h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#1565c0;">' + (rq.candidate_count || 0) + '</div><div class="kpi-label">Review Candidates</div></div>';
+      h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#2e7d32;">' + (sch.health_status || 'N/A') + '</div><div class="kpi-label">Scheduler Health</div></div>';
+      h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;">' + (alert.alert_required === false ? 'None' : 'Required') + '</div><div class="kpi-label">Alert Required</div></div>';
+      h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;">' + (wl.enabled_watchlists || []).join(', ') + '</div><div class="kpi-label">Enabled</div></div>';
+      h += '<div class="kpi-card"><div class="kpi-num" style="font-size:14px;color:#888;">' + (wl.disabled_watchlists || []).join(', ') + '</div><div class="kpi-label">Disabled</div></div>';
+      h += '</div>';
+      // Safety footer
+      h += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:11px;padding:8px 0;">';
+      h += '<span><strong>real_send:</strong> <span style="color:#2e7d32;">' + (safety.real_send || 'NOT_RUN') + '</span></span>';
+      h += '<span><strong>webhook_call:</strong> <span style="color:#2e7d32;">' + (safety.webhook_call || 'NOT_RUN') + '</span></span>';
+      h += '<span><strong>history_mod:</strong> <span style="color:#2e7d32;">' + (safety.delivered_history_modified === false ? 'false' : 'true') + '</span></span>';
+      h += '<span><strong>production:</strong> <span style="color:#2e7d32;">' + (safety.production || 'DISABLED') + '</span></span>';
+      h += '<span><strong>retry:</strong> <span style="color:#2e7d32;">' + (safety.retry || 'DISABLED') + '</span></span>';
+      h += '<span><strong>sched_mod:</strong> <span style="color:#2e7d32;">' + (safety.scheduler_modified === false ? 'false' : 'true') + '</span></span>';
+      h += '<span><strong>sched_trig:</strong> <span style="color:#2e7d32;">' + (safety.scheduler_triggered === false ? 'false' : 'true') + '</span></span>';
+      h += '<span><strong>auto_send:</strong> <span style="color:#2e7d32;">' + (safety.auto_send_enabled === false ? 'DISABLED' : 'ENABLED') + '</span></span>';
+      h += '</div>';
+      h += '<div style="padding:6px 12px;background:#f5f5f5;border-radius:4px;font-size:10px;color:#bbb;text-align:center;">Source: db_project_status_dashboard_snapshot.local.json &middot; Read-only &middot; No Apply Actions</div>';
+      h += '</div>';
+      return wrapSection('DB Status', h);
+    }
+  } catch(e) {}
+  var h = '<div class="card"><div class="card-title" style="font-size:16px;color:#1565c0;">🗄️ DB-Backed Dashboard Snapshot</div>';
+  h += '<div class="empty-box">Snapshot not available.<br>Expected: db_project_status_dashboard_snapshot.local.json<br>Run: py -3.12 backend/app/export_db_project_status_dashboard_snapshot.py</div>';
+  h += '</div>';
+  return wrapSection('DB Status', h);
+}
+
+// ── Settings (P1 placeholder) ─────────────────────────────────────
+function renderSettings(d) {
+  var h = '<div class="card"><div class="card-title">Settings <span style="font-size:11px;font-weight:400;color:#888;">&middot; Placeholder</span></div>';
+  h += '<div class="empty-box">Settings page placeholder — workspace/user/billing TBD.</div>';
+  h += '</div>';
+  return wrapSection('Settings', h);
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+loadAll();
+</script>
+</body>
+</html>

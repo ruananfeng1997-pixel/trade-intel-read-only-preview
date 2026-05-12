@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: trade-intel-read-only-preview
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python start_read_only_preview.py
+    healthCheckPath: /api/db/status
+    envVars:
+      - key: APP_MODE
+        value: READ_ONLY_PREVIEW
+      - key: PROJECT_STATE
+        value: RUNTIME_HOLD
+      - key: PRODUCTION
+        value: DISABLED
+      - key: RETRY
+        value: DISABLED
+      - key: AUTO_SEND_ENABLED
+        value: "false"
+      - key: REAL_SEND
+        value: NOT_RUN
+      - key: WEBHOOK_CALL
+        value: NOT_RUN
